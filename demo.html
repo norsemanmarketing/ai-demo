@@ -173,144 +173,150 @@
       </div>
     </div>
 
-    <script type="module">
-      import Vapi from "https://esm.sh/@vapi-ai/web";
+<script type="module">
+  import Vapi from "https://esm.sh/@vapi-ai/web";
 
-      const PUBLIC_KEY = "81937275-a97b-4e1e-8f52-299e25d4668b";
-      const ASSISTANT_ID = "74795584-111b-4f69-9223-78b555d26a10";
+  const PUBLIC_KEY = "81937275-a97b-4e1e-8f52-299e25d4668b";
+  const ASSISTANT_ID = "74795584-111b-4f69-9223-78b555d26a10";
 
-      const vapi = new Vapi(PUBLIC_KEY);
-      window.vapi = vapi;
-      console.log("Vapi ready", vapi);
+  const vapi = new Vapi(PUBLIC_KEY);
+  window.vapi = vapi; // for debugging in console
+  console.log("Vapi ready", vapi);
 
-      const launcher = document.getElementById("va-launcher");
-      const panel = document.getElementById("va-panel");
-      const closeBtn = document.getElementById("va-close");
+  const launcher = document.getElementById("va-launcher");
+  const panel = document.getElementById("va-panel");
+  const closeBtn = document.getElementById("va-close");
 
-      const tabVoice = document.getElementById("tab-voice");
-      const tabChat = document.getElementById("tab-chat");
-      const voiceSection = document.getElementById("va-voice");
-      const chatSection = document.getElementById("va-chat");
+  const tabVoice = document.getElementById("tab-voice");
+  const tabChat = document.getElementById("tab-chat");
+  const voiceSection = document.getElementById("va-voice");
+  const chatSection = document.getElementById("va-chat");
 
-      const log = document.getElementById("va-log");
+  const log = document.getElementById("va-log");
 
-      const voiceToggle = document.getElementById("btn-voice-toggle");
-      let voiceActive = false;
+  const voiceToggle = document.getElementById("btn-voice-toggle");
+  let voiceActive = false;
 
-      const chatForm = document.getElementById("chat-form");
-      const chatInput = document.getElementById("chat-input");
+  const chatForm = document.getElementById("chat-form");
+  const chatInput = document.getElementById("chat-input");
 
-      function addMsg(role, text) {
-        const wrap = document.createElement("div");
-        wrap.className = "msg";
-        wrap.innerHTML = `<div class="role">${role}</div><div class="text">${escapeHtml(text)}</div>`;
-        log.appendChild(wrap);
-        log.scrollTop = log.scrollHeight;
+  function escapeHtml(str) {
+    return (str ?? "").replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[m]));
+  }
+
+  function addMsg(role, text) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg";
+    wrap.innerHTML = `<div class="role">${escapeHtml(role)}</div><div class="text">${escapeHtml(text)}</div>`;
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setMode(mode) {
+    if (mode === "voice") {
+      tabVoice.classList.add("active");
+      tabChat.classList.remove("active");
+      voiceSection.style.display = "block";
+      chatSection.style.display = "none";
+    } else {
+      tabChat.classList.add("active");
+      tabVoice.classList.remove("active");
+      chatSection.style.display = "block";
+      voiceSection.style.display = "none";
+      chatInput?.focus();
+    }
+  }
+
+  function openPanel() {
+    panel.style.display = "block";
+    setMode("voice");
+  }
+
+  function closePanel() {
+    panel.style.display = "none";
+  }
+
+  launcher.addEventListener("click", openPanel);
+  closeBtn.addEventListener("click", closePanel);
+  tabVoice.addEventListener("click", () => setMode("voice"));
+  tabChat.addEventListener("click", () => setMode("chat"));
+
+  // --- Vapi event listeners (transcript + assistant text) ---
+  vapi.on("message", (message) => {
+    // Uncomment to inspect all events:
+    // console.log("Vapi message:", message?.type, message);
+
+    // Voice transcripts (final)
+    if (message?.type === "transcript") {
+      if (message.transcriptType === "final" && message.transcript) {
+        addMsg(message.role, message.transcript);
+      }
+    }
+
+    // Assistant text responses (covers chat-style output)
+    if (message?.type === "conversation-update") {
+      const msgs = message.messages || [];
+      const last = msgs[msgs.length - 1];
+      if (last?.role === "assistant" && last?.content) {
+        addMsg("assistant", last.content);
+      }
+    }
+  });
+
+  vapi.on("error", (e) => addMsg("error", e?.message ?? String(e)));
+
+  // --- Voice start/stop ---
+  voiceToggle.addEventListener("click", async () => {
+    try {
+      if (!voiceActive) {
+        addMsg("system", "Starting voice…");
+        await vapi.start(ASSISTANT_ID);
+        voiceActive = true;
+        voiceToggle.textContent = "Stop voice";
+      } else {
+        addMsg("system", "Stopping voice…");
+        vapi.stop();
+        voiceActive = false;
+        voiceToggle.textContent = "Start voice";
+      }
+    } catch (e) {
+      addMsg("error", e?.message ?? String(e));
+    }
+  });
+
+  // --- Chat submit (send text through the SDK; DO NOT call POST /chat from browser) ---
+  chatForm.addEventListener("submit", async (evt) => {
+    evt.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    chatInput.value = "";
+    addMsg("user", text);
+
+    try {
+      // If there isn't an active session yet, start one (voice session also works for text input)
+      if (!vapi.started) {
+        await vapi.start(ASSISTANT_ID);
+        voiceActive = true;
+        voiceToggle.textContent = "Stop voice";
       }
 
-      function escapeHtml(str) {
-        return (str ?? "").replace(/[&<>"']/g, (m) => ({
-          "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-        }[m]));
+      // Send user text into the conversation
+      if (typeof vapi.send !== "function") {
+        throw new Error("This SDK build doesn't expose vapi.send(). Tell me what Object.keys(window.vapi) returns.");
       }
 
-      function openPanel() {
-        panel.style.display = "block";
-        // default to voice UI
-        setMode("voice");
-      }
-
-      function closePanel() {
-        panel.style.display = "none";
-      }
-
-      function setMode(mode) {
-        if (mode === "voice") {
-          tabVoice.classList.add("active");
-          tabChat.classList.remove("active");
-          voiceSection.style.display = "block";
-          chatSection.style.display = "none";
-        } else {
-          tabChat.classList.add("active");
-          tabVoice.classList.remove("active");
-          chatSection.style.display = "block";
-          voiceSection.style.display = "none";
-          chatInput.focus();
-        }
-      }
-
-      launcher.addEventListener("click", openPanel);
-      closeBtn.addEventListener("click", closePanel);
-      tabVoice.addEventListener("click", () => setMode("voice"));
-      tabChat.addEventListener("click", () => setMode("chat"));
-
-      // Voice start/stop
-      voiceToggle.addEventListener("click", async () => {
-        try {
-          if (!voiceActive) {
-            addMsg("system", "Starting voice…");
-            await vapi.start(ASSISTANT_ID);
-            voiceActive = true;
-            voiceToggle.textContent = "Stop voice";
-          } else {
-            addMsg("system", "Stopping voice…");
-            vapi.stop();
-            voiceActive = false;
-            voiceToggle.textContent = "Start voice";
-          }
-        } catch (e) {
-          addMsg("error", (e && e.message) ? e.message : String(e));
-        }
+      await vapi.send({
+        type: "add-message",
+        message: { role: "user", content: text }
       });
-
-      // Live transcripts/messages
-      vapi.on("message", (message) => {
-        if (message.type === "transcript") {
-          // message.role: "user" | "assistant"
-          // message.transcriptType: "partial" | "final"
-          if (message.transcriptType === "final" && message.transcript) {
-            addMsg(message.role, message.transcript);
-          }
-        }
-      });
-
-      vapi.on("error", (e) => addMsg("error", e?.message ?? String(e)));
-
-      // Chat (text): use Vapi REST /chat endpoint via fetch
-      let previousChatId = null;
-
-      chatForm.addEventListener("submit", async (evt) => {
-        evt.preventDefault();
-        const text = chatInput.value.trim();
-        if (!text) return;
-        chatInput.value = "";
-
-        addMsg("user", text);
-
-        try {
-          const res = await fetch("https://api.vapi.ai/chat", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${PUBLIC_KEY}`
-            },
-            body: JSON.stringify({
-              assistantId: ASSISTANT_ID,
-              input: text,
-              previousChatId
-            })
-          });
-
-          const data = await res.json();
-          if (!res.ok) throw new Error(data?.message ? JSON.stringify(data.message) : "Chat request failed");
-
-          previousChatId = data.id;
-          const out = data.output?.[0]?.content ?? "(no response)";
-          addMsg("assistant", out);
-        } catch (e) {
-          addMsg("error", e?.message ?? String(e));
-        }
-      });
-    </script>
+    } catch (e) {
+      addMsg("error", e?.message ?? String(e));
+    }
+  });
+</script>
+    
   </body>
 </html>
