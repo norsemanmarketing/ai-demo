@@ -180,6 +180,8 @@
       const ASSISTANT_ID = "74795584-111b-4f69-9223-78b555d26a10";
 
       const vapi = new Vapi(PUBLIC_KEY);
+      window.vapi = vapi;
+      console.log("Vapi ready", vapi);
 
       const launcher = document.getElementById("va-launcher");
       const panel = document.getElementById("va-panel");
