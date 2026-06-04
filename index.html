@@ -24,23 +24,26 @@
       </p>
     </div>
 
-    <script
-      src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js"
-      defer
-      async
-    ></script>
+<script
+  src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js"
+  defer
+  async
+></script>
 
-    <script>
-      window.addEventListener("load", () => {
-        window.vapiSDK.run({
-          apiKey: "81937275-a97b-4e1e-8f52-299e25d4668b",
-          assistant: "74795584-111b-4f69-9223-78b555d26a10",
-          config: {
-            position: "bottom-right",
-            initialMode: "voice" // default to voice; user can switch to chat
-          }
-        });
-      });
-    </script>
+<script>
+  window.addEventListener("load", () => {
+    window.vapiSDK.run({
+      apiKey: "81937275-a97b-4e1e-8f52-299e25d4668b",
+      assistant: "74795584-111b-4f69-9223-78b555d26a10",
+      config: {
+        position: "bottom-right",
+        voice: { enabled: true },
+        chat: { enabled: true },
+        initialMode: "voice"
+      }
+    });
+  });
+</script>
+    
   </body>
 </html>
