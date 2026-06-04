@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Norseman AI Demo</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
+      .card { max-width: 720px; line-height: 1.4; }
+      code { background: #f4f4f5; padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Norseman — Alex (Demo)</h1>
+      <p>
+        Click the widget in the bottom-right to talk to Alex. Your browser will ask for microphone access.
+      </p>
+      <p>
+        Assistant ID: <code>74795584-111b-4f69-9223-78b555d26a10</code>
+      </p>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js"
+      defer
+      async
+    ></script>
+
+    <script>
+      window.addEventListener("load", () => {
+        window.vapiSDK.run({
+          apiKey: "81937275-a97b-4e1e-8f52-299e25d4668b",
+          assistant: "74795584-111b-4f69-9223-78b555d26a10",
+          config: {
+            position: "bottom-right",
+            initialMode: "voice" // default to voice; user can switch to chat
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
